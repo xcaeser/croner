@@ -1,0 +1,44 @@
+name: Croner Tests
+on:
+  push:
+    paths:
+      - "src/**"
+      - "build.zig"
+      - "build.zig.zon"
+      - "croner.schema.json"
+      - "install.sh"
+      - "release.sh"
+      - ".github/workflows/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "build.zig"
+      - "build.zig.zon"
+      - "croner.schema.json"
+      - "install.sh"
+      - "release.sh"
+      - ".github/workflows/**"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Zig Compiler
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0-dev.1893+78e3b1c73
+
+      - name: Check formatting
+        run: zig fmt --check .
+
+      - name: Test
+        run: zig build test --summary all
+
+      - name: Check scripts
+        run: |
+          sh -n install.sh
+          bash -n release.sh

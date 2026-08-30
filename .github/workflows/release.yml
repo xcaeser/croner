@@ -1,0 +1,75 @@
+name: Croner Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0-dev.1893+78e3b1c73
+      - run: zig fmt --check .
+      - run: zig build test --summary all
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-linux-musl
+            asset: x86_64-linux
+          - target: aarch64-linux-musl
+            asset: aarch64-linux
+          - target: x86_64-macos
+            asset: x86_64-macos
+          - target: aarch64-macos
+            asset: aarch64-macos
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.17.0-dev.1893+78e3b1c73
+      - name: Build
+        run: zig build -Doptimize=ReleaseSafe -Dtarget=${{ matrix.target }}
+      - name: Package
+        run: |
+          mkdir -p artifacts dist
+          cp zig-out/bin/croner dist/croner
+          cp LICENSE dist/LICENSE
+          tar -C dist -czf artifacts/croner-${{ matrix.asset }}.tar.gz croner LICENSE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: croner-${{ matrix.asset }}
+          path: artifacts/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Create checksums
+        working-directory: release
+        run: sha256sum croner-*.tar.gz > SHA256SUMS
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: RELEASE-NOTES.md
+          files: release/*
+          fail_on_unmatched_files: true

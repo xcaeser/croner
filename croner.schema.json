@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://xcaeser.github.io/croner/croner.schema.json",
+  "title": "Croner configuration",
+  "description": "Jobs managed by the Croner background scheduler.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "const": "https://xcaeser.github.io/croner/croner.schema.json"
+    },
+    "jobs": {
+      "type": "array",
+      "description": "Configured jobs. IDs must be unique at runtime.",
+      "items": {
+        "$ref": "#/$defs/job"
+      }
+    }
+  },
+  "required": ["jobs"],
+  "$defs": {
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A nonempty stable identifier unique within this config."
+        },
+        "schedule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A five-field UTC cron expression."
+        },
+        "action": {
+          "$ref": "#/$defs/action"
+        },
+        "overlap": {
+          "type": "string",
+          "enum": ["skip", "concurrent"],
+          "default": "skip"
+        }
+      },
+      "required": ["id", "schedule", "action"]
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "$ref": "#/$defs/command"
+        }
+      },
+      "required": ["command"]
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "cwd": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Working directory; relative paths use the config directory."
+        },
+        "env": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["argv"]
+    }
+  }
+}
